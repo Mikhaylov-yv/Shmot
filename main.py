@@ -68,12 +68,13 @@ for i in range(55):
             df_new = df
         else: df_new = pd.concat([df,df_new])
         print(df_new.shape)
-    except:
+    except Exception as e:
+        print(e)
         break
 df_isx = pd.read_excel(fil_name)
 
-df_isx.to_pickle('df_isx.pkl')
-df_new.to_pickle('df_new.pkl')
+# df_isx.to_pickle('df_isx.pkl')
+# df_new.to_pickle('df_new.pkl')
 
 # Фильтруем только новое или с меньшей ценой
 
