@@ -4,6 +4,7 @@ import time
 import pandas as pd
 import vk_api
 from my_data import MyVKData_O
+import traceback
 
 gneral_url = 'https://www.lamoda.ru'
 url = '/c/1947/clothes-sports-myzsk-kurtki/?is_sale=1&page='
@@ -34,21 +35,23 @@ for i in range(55):
             print(url_gen)
             html = requests.get(url_gen)
             soup = BeautifulSoup(html.text, features='lxml')
+
+
             ad_data = soup.find_all('div', class_='products-list-item')
             if len(ad_data) <1:
                 exitFlag = True
                 break
             try:
-                firm = ad_data[0].find('span', class_='products-list-item__brand-name').text
+                firm = ad_data[0].find('div', class_='products-list-item__brand').text.split('\n')[1].strip()
                 successful = True
-            except:
+            except Exception as e:
                 successful = False
-                # print(ad_data[0])
                 time.sleep(2)
+                print('Ошибка:\n', traceback.format_exc())
                 continue
             for data in ad_data:
-                firm = data.find('span', class_='products-list-item__brand-name').text
-                name = data.find('span', class_='products-list-item__type').text
+                firm = data.find('div', class_='products-list-item__brand').text.split('\n')[1].strip()
+                name = data.find('span', class_='products-list-item__type').text.split('\n')[1].strip()
                 if 'пуховик' not in name.lower():
                     continue
                 tov_url = gneral_url + data.find('a', class_='products-list-item__link link')['href']
@@ -69,12 +72,10 @@ for i in range(55):
         else: df_new = pd.concat([df,df_new])
         print(df_new.shape)
     except Exception as e:
-        print(e)
+        print('Ошибка:\n', traceback.format_exc())
         break
 df_isx = pd.read_excel(fil_name)
 
-# df_isx.to_pickle('df_isx.pkl')
-# df_new.to_pickle('df_new.pkl')
 
 # Фильтруем только новое или с меньшей ценой
 
@@ -84,6 +85,8 @@ if df_nev_cen.shape[0]>0:
     df_nev_cen = df_nev_cen[df_nev_cen.apply(lambda row: int(row['Цена']) <  int(df_isx[df_isx['Ссылка'] == row['Ссылка']]['Цена'].min()), axis=1)]
     df_nev_fiilt = pd.concat([df_nev_cen,df_nev_tov])
 else: df_nev_fiilt = df_nev_tov
+# Отсортированный список новинок
+df_nev_fiilt_sort = df_nev_fiilt.sort_values(['Скидка'], ascending = False).values.tolist()
 print('Найдено новых записей: ' + str(df_new.shape[0]))
 print('Осталось после фильтации: ' + str(df_nev_fiilt.shape[0]))
 df_out = pd.concat([df_isx,df_nev_fiilt])
@@ -102,8 +105,13 @@ vk_session_wall = vk_api.VkApi(login=MyVKData_O.LOGIN, password=MyVKData_O.GET_P
 vk_session_wall.auth()
 vk_wall = vk_session_wall.get_api()
 print(df_nev_fiilt.shape[0])
-for tov in  df_nev_fiilt.values.tolist():
-    wall_post('Новая скидка на пуховик фирмы ' + str(tov[1]) +  ' цена: ' +str(tov[2]), tov[4], vk_wall)
-    time.sleep(1)
+
+post_text = ''
+for rang in df_nev_fiilt_sort:
+    post_text = post_text + str(rang[0]) + ' ' + str(rang[1]
+        ) + ' ' + 'цена:' + str(rang[2]) + ' ссылка: ' + str(
+        rang[4]) + '\n'
+wall_post(post_text,'', vk_wall)
+time.sleep(1)
 
 
